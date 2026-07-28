@@ -1441,23 +1441,14 @@ function Dashboard() {
           </button>
           <button onClick={async () => {
             const current = await window.securityLayer?.getDecryptedKey('claude_session_key');
-            const raw = prompt('Pega aquí la cookie o el código sk-ant-sid01-... de Claude.ai:', current || '');
-            if (raw !== null) {
-              if (raw.trim()) {
-                // Extracción automática inteligente del token sessionKey si pega todo el texto de document.cookie
+            const action = confirm('¿Quieres introducir tu clave/cookie de Claude.ai manualmente?\n\nSi usas Opera Móvil, pulsa Aceptar para escribir/pegar tu token, o Cancelar si prefieres usar el modo gratuito simulado.');
+            if (action) {
+              const raw = prompt('Pega aquí el código que empieza por sk-ant-sid01-... (o toda la cookie):', current || '');
+              if (raw && raw.trim()) {
                 let key = raw.trim();
-                if (key.includes('sessionKey=')) {
-                  key = key.split('sessionKey=')[1].split(';')[0].trim();
-                }
-                if (key.startsWith('sk-ant-') || key.length > 20) {
-                  await window.securityLayer?.saveEncryptedKey('claude_session_key', key);
-                  alert('✓ Sesión Web de Claude extraída, cifrada y guardada correctamente.');
-                } else {
-                  alert('⚠️ No se detectó un sessionKey válido. Asegúrate de incluir el código que empieza por sk-ant-sid01-...');
-                }
-              } else {
-                window.securityLayer?.removeKey('claude_session_key');
-                alert('Sesión Web de Claude desactivada.');
+                if (key.includes('sessionKey=')) key = key.split('sessionKey=')[1].split(';')[0].trim();
+                await window.securityLayer?.saveEncryptedKey('claude_session_key', key);
+                alert('✓ Sesión cifrada y guardada correctamente.');
               }
             }
           }} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${window.securityLayer?.hasKey('claude_session_key')?T.teal+'60':T.border}`, background:window.securityLayer?.hasKey('claude_session_key')?T.teal+'15':'transparent', color:window.securityLayer?.hasKey('claude_session_key')?T.teal:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
