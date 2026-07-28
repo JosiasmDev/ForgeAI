@@ -47,29 +47,39 @@
     window.useReducer = React.useReducer;
     window.createContext = React.createContext;
     window.useContext = React.useContext;
+
+    // Configurar Babel para usar el runtime clásico de React (React.createElement)
+    // Evita la inyección de "import { jsx } from 'react/jsx-runtime'" que falla en el navegador
+    Babel.registerPreset('classic-react', {
+      presets: [
+        [Babel.availablePresets['react'], { runtime: 'classic' }]
+      ]
+    });
   </script>
 
-  <!-- Carga del archivo principal de la aplicación -->
-  <script type="text/babel" src="./App.jsx" data-presets="react"></script>
+  <!-- Carga del archivo principal de la aplicación con la preset clásica -->
+  <script type="text/babel" data-presets="classic-react" src="./App.jsx"></script>
 
-  <!-- Renderizado del componente principal cuando App.jsx haya cargado -->
-  <script type="text/babel">
-    window.addEventListener('DOMContentLoaded', () => {
-      // Esperar un momento a que Babel compile App.jsx
-      setTimeout(() => {
-        if (typeof Dashboard !== 'undefined' && typeof StoreProvider !== 'undefined') {
-          const container = document.getElementById('root');
-          const root = ReactDOM.createRoot(container);
-          root.render(
-            <StoreProvider>
-              <Dashboard />
-            </StoreProvider>
-          );
-        } else {
-          console.error("No se pudo encontrar Dashboard o StoreProvider");
-        }
-      }, 300);
-    });
+  <!-- Renderizado del componente principal -->
+  <script type="text/babel" data-presets="classic-react">
+    function mountApp() {
+      if (typeof Dashboard !== 'undefined' && typeof StoreProvider !== 'undefined') {
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(
+          <StoreProvider>
+            <Dashboard />
+          </StoreProvider>
+        );
+      } else {
+        setTimeout(mountApp, 100);
+      }
+    }
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', mountApp);
+    } else {
+      mountApp();
+    }
   </script>
 </body>
 
