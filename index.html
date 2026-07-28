@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ForgeAI</title>
 
-  <!-- React 18 & ReactDOM -->
+  <!-- React 18 & ReactDOM UMD -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <!-- Babel standalone para transformar JSX en tiempo de ejecución -->
@@ -37,49 +37,24 @@
 <body>
   <div id="root"></div>
 
-  <!-- Exponer hooks de React de forma global para que el script JSX no falle -->
-  <script>
-    window.useState = React.useState;
-    window.useEffect = React.useEffect;
-    window.useRef = React.useRef;
-    window.useCallback = React.useCallback;
-    window.useMemo = React.useMemo;
-    window.useReducer = React.useReducer;
-    window.createContext = React.createContext;
-    window.useContext = React.useContext;
-
-    // Configurar Babel para usar el runtime clásico de React (React.createElement)
-    // Evita la inyección de "import { jsx } from 'react/jsx-runtime'" que falla en el navegador
-    Babel.registerPreset('classic-react', {
-      presets: [
-        [Babel.availablePresets['react'], { runtime: 'classic' }]
-      ]
-    });
-  </script>
-
-  <!-- Carga del archivo principal de la aplicación con la preset clásica -->
-  <script type="text/babel" data-presets="classic-react" src="./App.jsx"></script>
+  <!-- Carga y compilación clásica de React -->
+  <script type="text/babel" data-type="module" data-presets="react" src="./App.jsx"></script>
 
   <!-- Renderizado del componente principal -->
-  <script type="text/babel" data-presets="classic-react">
-    function mountApp() {
-      if (typeof Dashboard !== 'undefined' && typeof StoreProvider !== 'undefined') {
-        const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
+  <script type="text/babel">
+    function renderApp() {
+      if (typeof window.Dashboard !== 'undefined' && typeof window.StoreProvider !== 'undefined') {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(
-          <StoreProvider>
-            <Dashboard />
-          </StoreProvider>
+          <window.StoreProvider>
+            <window.Dashboard />
+          </window.StoreProvider>
         );
       } else {
-        setTimeout(mountApp, 100);
+        setTimeout(renderApp, 100);
       }
     }
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', mountApp);
-    } else {
-      mountApp();
-    }
+    renderApp();
   </script>
 </body>
 

@@ -1,3 +1,13 @@
+// React Hooks Globals
+const useState = React.useState;
+const useEffect = React.useEffect;
+const useRef = React.useRef;
+const useCallback = React.useCallback;
+const useMemo = React.useMemo;
+const useReducer = React.useReducer;
+const createContext = React.createContext;
+const useContext = React.useContext;
+
 // ─── KERNEL ────────────────────────────────────────────────────────────────────
 class ForgeError extends Error {
   constructor(msg, code = 'ERR', ctx = {}) {
