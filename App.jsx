@@ -968,7 +968,7 @@ function StreamOutput({ content, isStreaming }) {
 }
 
 function TaskCard({ task, index }) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true);
   const am = AMETA[task.assignedAgentRole] || { icon:'🤖', name:task.assignedAgentRole, color:T.textMuted };
   const sc = { pending:T.textMuted, running:T.warning, streaming:T.teal, awaiting_approval:T.accent, completed:T.success, failed:T.error, rejected:T.error }[task.status] || T.textMuted;
   const isStreaming = task.status === 'streaming';
