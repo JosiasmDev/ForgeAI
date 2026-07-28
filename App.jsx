@@ -518,7 +518,7 @@ const runPipeline = async (task, mission, agent, projectId, onStream) => {
   eventBus.emit({ type:'EvaluationCompleted', projectId, payload:{ taskId:task.id, agentRole:agent.role, score, feedback } });
   memoryEngine.extractAndStore(result.output, agent.role, task, projectId, score);
   agentRegistry.recordPerformance(agent.role, { taskId:task.id, timestamp:new Date().toISOString(), score, feedback, tokensUsed:result.tokensUsed||0, latencyMs:result.latencyMs||0, evaluatedBy:'quality' });
-  return { output:result.output, score, feedback, tokensUsed:result.tokensUsed, latencyMs:result.latencyMs };
+  return { output:result.output, score, feedback, tokensUsed:result.tokensUsed, latencyMs:result.latencyMs, provider:result.provider||'simulation' };
 };
 
 const mkTask = (mid, title, desc, role, input, deps = []) => ({
@@ -960,9 +960,10 @@ function TaskCard({ task, index }) {
             <span style={{ fontSize:13, fontWeight:500, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{task.title}</span>
             {(task.status==='running'||isStreaming) && <Spinner size={12}/>}
           </div>
-          <div style={{ display:'flex', gap:7, marginTop:2 }}>
+          <div style={{ display:'flex', gap:7, marginTop:2, alignItems:'center' }}>
             <span style={{ fontSize:11, color:am.color, fontWeight:600 }}>{am.name}</span>
             <span style={{ fontSize:11, color:sc, fontWeight:500 }}>· {isStreaming?'streaming…':task.status}</span>
+            {task.provider && <span style={{ fontSize:10, padding:'1px 6px', borderRadius:10, background:T.primary+'20', color:T.primary, fontWeight:600 }}>{task.provider}</span>}
             {task.evaluation && <span style={{ fontSize:11, color:T.textMuted }}>· {task.evaluation.score}/100</span>}
           </div>
         </div>
