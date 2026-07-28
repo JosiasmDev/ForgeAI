@@ -37,45 +37,32 @@
 <body>
   <div id="root"></div>
 
-  <!-- Carga y compilación clásica de React -->
+  <!-- Exponer React en el ámbito global para Babel -->
+  <script>
+    window.React = React;
+    window.ReactDOM = ReactDOM;
+  </script>
+
+  <!-- Carga de App.jsx -->
   <script type="text/babel" data-presets="react" src="./App.jsx"></script>
 
-  <!-- Renderizado del componente principal -->
-  <script type="text/babel">
-    let attempts = 0;
-    function renderApp() {
-      try {
-        const Dash = window.Dashboard || (typeof Dashboard !== 'undefined' ? Dashboard : null);
-        const Store = window.StoreProvider || (typeof StoreProvider !== 'undefined' ? StoreProvider : null);
-
-        if (Dash && Store) {
+  <!-- Renderizado cuando el script de App.jsx haya sido procesado por Babel -->
+  <script type="text/babel" data-presets="react">
+    (function init() {
+      function checkAndRender() {
+        if (window.StoreProvider && window.Dashboard) {
           const root = ReactDOM.createRoot(document.getElementById('root'));
           root.render(
-            <Store>
-              <Dash />
-            </Store>
+            <window.StoreProvider>
+              <window.Dashboard />
+            </window.StoreProvider>
           );
-        } else if (attempts < 60) {
-          attempts++;
-          setTimeout(renderApp, 100);
         } else {
-          document.getElementById('root').innerHTML = `
-            <div style="padding: 40px; text-align: center; color: #ef4444;">
-              <h2>⚠️ Error de Carga</h2>
-              <p style="margin-top: 10px; color: #94a3b8;">No se han podido cargar los componentes de la aplicación.</p>
-            </div>
-          `;
+          requestAnimationFrame(checkAndRender);
         }
-      } catch (err) {
-        document.getElementById('root').innerHTML = `
-          <div style="padding: 40px; text-align: center; color: #ef4444;">
-            <h2>⚠️ Error de Ejecución</h2>
-            <pre style="margin-top: 10px; color: #94a3b8; font-family: monospace;">${err.message}</pre>
-          </div>
-        `;
       }
-    }
-    renderApp();
+      checkAndRender();
+    })();
   </script>
 </body>
 
