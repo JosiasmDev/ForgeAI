@@ -1412,10 +1412,26 @@ function Dashboard() {
   const [importErr, setImportErr] = useState('');
   const fileRef = useRef();
 
+  // Sincronización automática de navegación por URL hash (#project-ID)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#project-')) {
+        const id = hash.replace('#project-', '');
+        if (id && projects.some(p => p.id === id)) {
+          setActiveProjectId(id);
+        }
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [projects]);
+
   const activeProject = projects.find(p => p.id === activeProjectId);
 
   if (activeProject) {
-    return <ProjectView project={activeProject} onBack={() => setActiveProjectId(null)} />;
+    return <ProjectView project={activeProject} onBack={() => { window.location.hash = ''; setActiveProjectId(null); }} />;
   }
 
   const tot = projects.reduce((s,p)=>s+(p.missions?.length||0),0);
@@ -1499,7 +1515,7 @@ function Dashboard() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map(p => (
-              <Card key={p.id} onClick={() => { setActiveProject(p.id); }} style={{ padding: 18, cursor: 'pointer' }}>
+              <Card key={p.id} onClick={() => { window.location.hash = `#project-${p.id}`; setActiveProject(p.id); }} style={{ padding: 18, cursor: 'pointer' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                   <h3 style={{ color: T.text, fontSize: 16, fontFamily:'Space Grotesk' }}>{p.name}</h3>
                   <Badge label={CAT[p.category]?.label || p.category} color={CAT[p.category]?.color || T.primary}/>
@@ -1509,7 +1525,9 @@ function Dashboard() {
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontSize:12, color:T.textDim }}>{p.missions?.length || 0} misiones</span>
                   <div style={{ display:'flex', gap:6 }}>
-                    <Btn size="xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveProject(p.id); }}>Abrir →</Btn>
+                    <a href={`#project-${p.id}`} onClick={(e) => { e.stopPropagation(); setActiveProject(p.id); }} style={{ padding:'4px 10px', background:T.primary, color:'#fff', borderRadius:6, textDecoration:'none', fontSize:12, fontWeight:500, display:'inline-block' }}>
+                      Abrir →
+                    </a>
                     <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); e.preventDefault(); deleteProject(p.id); }}>Eliminar</Btn>
                   </div>
                 </div>
