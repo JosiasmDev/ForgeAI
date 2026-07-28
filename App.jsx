@@ -778,7 +778,7 @@ function StoreProvider({ children }) {
       try { pr = await scheduler.enqueue(() => runPipeline(task, mission, agent, projectId, onStream), { priority:'high', id:task.id }); }
       catch(e) { task = { ...task, status:'failed', output:`Error: ${e.message}` }; dispatch({ type:'UPDATE_TASK', projectId, missionId, task }); continue; }
 
-      task = { ...task, status:'awaiting_approval', output:pr.output, streamBuffer:'', evaluation:{ score:pr.score, feedback:pr.feedback, evaluatedBy:'quality', timestamp:new Date().toISOString() } };
+      task = { ...task, status:'awaiting_approval', output:pr.output, provider:pr.provider, streamBuffer:'', evaluation:{ score:pr.score, feedback:pr.feedback, evaluatedBy:'quality', timestamp:new Date().toISOString() } };
       dispatch({ type:'UPDATE_TASK', projectId, missionId, task });
 
       if (reqApproval) {
@@ -791,7 +791,7 @@ function StoreProvider({ children }) {
           setIsRunning(false); return;
         }
       }
-      task = { ...task, status:'completed', completedAt:new Date().toISOString() };
+      task = { ...task, status:'completed', provider:pr.provider, completedAt:new Date().toISOString() };
       dispatch({ type:'UPDATE_TASK', projectId, missionId, task }); completed.add(task.id);
       eventBus.emit({ type:'TaskCompleted', projectId, payload:{ taskId:task.id, agentRole:task.assignedAgentRole, score:pr.score, tokensUsed:pr.tokensUsed, latencyMs:pr.latencyMs } });
     }
