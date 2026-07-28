@@ -244,7 +244,10 @@ const aiService = {
           const outText = data.content?.[0]?.text || '[Error en respuesta de API]';
           localStorage.setItem('fai4_usage_count', (usageCount + 1).toString());
           if (onChunk) onChunk(outText, true);
-          return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'anthropic-api' };
+          const result = { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'anthropic-api' };
+          _aiMetrics.push({ ts: new Date().toISOString(), role, ...result });
+          eventBus.emit({ type: 'AIExecutionCompleted', projectId: agentConfig?.projectId || '__system__', payload: { role, ...result } });
+          return result;
         } else if (openAIKey) {
           const res = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -270,7 +273,10 @@ const aiService = {
           const outText = data.choices?.[0]?.message?.content || '[Error en respuesta de API]';
           localStorage.setItem('fai4_usage_count', (usageCount + 1).toString());
           if (onChunk) onChunk(outText, true);
-          return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'openai-api' };
+          const result = { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'openai-api' };
+          _aiMetrics.push({ ts: new Date().toISOString(), role, ...result });
+          eventBus.emit({ type: 'AIExecutionCompleted', projectId: agentConfig?.projectId || '__system__', payload: { role, ...result } });
+          return result;
         }
       } catch (e) {
         if (e && e.name === 'ForgeError') throw e;
