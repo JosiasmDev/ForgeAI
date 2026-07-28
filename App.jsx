@@ -648,7 +648,7 @@ function projectsReducer(state, action) {
   switch (action.type) {
     case 'INIT': return action.projects;
     case 'CREATE': {
-      const p = { id:uid('proj'), ...action.data, status:'idea', memory:{summary:'',knowledgeGraph:{nodes:[]},lastUpdated:new Date().toISOString()}, missions:[], installedAgents:agentRegistry.getEnabled(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+      const p = action.data.id ? action.data : { id:uid('proj'), ...action.data, status:'idea', memory:{summary:'',knowledgeGraph:{nodes:[]},lastUpdated:new Date().toISOString()}, missions:[], installedAgents:agentRegistry.getEnabled(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
       return [p, ...state];
     }
     case 'UPDATE': return state.map(p => p.id===action.id ? { ...p, ...action.updates, updatedAt:new Date().toISOString() } : p);
@@ -712,10 +712,10 @@ function StoreProvider({ children }) {
   }, []);
 
   const createProject = useCallback((data) => {
-    const tmp = { id:uid('proj'), ...data, status:'idea', memory:{summary:'',knowledgeGraph:{nodes:[]},lastUpdated:new Date().toISOString()}, missions:[], installedAgents:agentRegistry.getEnabled(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
-    dispatch({ type:'CREATE', data });
-    eventBus.emit({ type:'ProjectCreated', projectId:tmp.id, payload:{ name:data.name } });
-    return tmp;
+    const p = { id:uid('proj'), ...data, status:'idea', memory:{summary:'',knowledgeGraph:{nodes:[]},lastUpdated:new Date().toISOString()}, missions:[], installedAgents:agentRegistry.getEnabled(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+    dispatch({ type:'CREATE', data: p });
+    eventBus.emit({ type:'ProjectCreated', projectId:p.id, payload:{ name:data.name } });
+    return p;
   }, []);
 
   const updateProject = useCallback((id, updates) => dispatch({ type:'UPDATE', id, updates }), []);
