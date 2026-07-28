@@ -38,20 +38,38 @@
   <div id="root"></div>
 
   <!-- Carga y compilación clásica de React -->
-  <script type="text/babel" data-type="module" data-presets="react" src="./App.jsx"></script>
+  <script type="text/babel" data-presets="react" src="./App.jsx"></script>
 
   <!-- Renderizado del componente principal -->
   <script type="text/babel">
+    let attempts = 0;
     function renderApp() {
-      if (typeof window.Dashboard !== 'undefined' && typeof window.StoreProvider !== 'undefined') {
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(
-          <window.StoreProvider>
-            <window.Dashboard />
-          </window.StoreProvider>
-        );
-      } else {
-        setTimeout(renderApp, 100);
+      try {
+        if (typeof window.Dashboard !== 'undefined' && typeof window.StoreProvider !== 'undefined') {
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(
+            <window.StoreProvider>
+              <window.Dashboard />
+            </window.StoreProvider>
+          );
+        } else if (attempts < 50) {
+          attempts++;
+          setTimeout(renderApp, 100);
+        } else {
+          document.getElementById('root').innerHTML = `
+            <div style="padding: 40px; text-align: center; color: #ef4444;">
+              <h2>⚠️ Error de Carga</h2>
+              <p style="margin-top: 10px; color: #94a3b8;">No se han podido cargar los componentes de la aplicación.</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        document.getElementById('root').innerHTML = `
+          <div style="padding: 40px; text-align: center; color: #ef4444;">
+            <h2>⚠️ Error de Ejecución</h2>
+            <pre style="margin-top: 10px; color: #94a3b8; font-family: monospace;">${err.message}</pre>
+          </div>
+        `;
       }
     }
     renderApp();
