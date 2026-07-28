@@ -1163,4 +1163,14 @@ function Dashboard({ onNavigate }) {
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           {!storageReady && <span style={{ fontSize:12, color:T.warning }}>⏳ IndexedDB…</span>}
           <button onClick={toggleSim} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${config.simulationMode?T.accent+'60':T.border}`, background:config.simulationMode?T.accent+'15':'transparent', color:config.simulationMode?T.accent:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Exponer componentes globalmente
+window.StoreProvider = StoreProvider;
+window.Dashboard = Dashboard;
        
