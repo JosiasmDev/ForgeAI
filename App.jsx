@@ -43,7 +43,53 @@ const eventBus = {
   getHistory: (pid, type) => { let h = pid ? _hist.filter(e => e.projectId === pid) : [..._hist]; return type ? h.filter(e => e.type === type) : h; },
   getStats: () => { const c = {}; _hist.forEach(e => { c[e.type] = (c[e.type]||0)+1; }); return c; },
 };
-eventBus.use((e, next) => { e._ts = Date.now(); next(e); });
+// ─── SECURITY LAYER (AES-GCM Local Storage Encryption) ──────────────────────────
+const SEC_KEY_STORAGE = 'fai4_sec_vault';
+const securityLayer = {
+  async _getDeriveKey(passphrase) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+    );
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode('forgeai_static_salt_v4'), iterations: 100000, hash: 'SHA-256' },
+      keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+    );
+  },
+  async saveEncryptedKey(provider, apiKey, passphrase = 'forge_master_key') {
+    try {
+      const key = await this._getDeriveKey(passphrase);
+      const enc = new TextEncoder();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(apiKey));
+      const vault = JSON.parse(localStorage.getItem(SEC_KEY_STORAGE) || '{}');
+      vault[provider] = { iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) };
+      localStorage.setItem(SEC_KEY_STORAGE, JSON.stringify(vault));
+      return true;
+    } catch (e) { return false; }
+  },
+  async getDecryptedKey(provider, passphrase = 'forge_master_key') {
+    try {
+      const vault = JSON.parse(localStorage.getItem(SEC_KEY_STORAGE) || '{}');
+      if (!vault[provider]) return null;
+      const key = await this._getDeriveKey(passphrase);
+      const iv = new Uint8Array(vault[provider].iv);
+      const data = new Uint8Array(vault[provider].data);
+      const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+      return new TextDecoder().decode(decrypted);
+    } catch (e) { return null; }
+  },
+  removeKey(provider) {
+    const vault = JSON.parse(localStorage.getItem(SEC_KEY_STORAGE) || '{}');
+    delete vault[provider];
+    localStorage.setItem(SEC_KEY_STORAGE, JSON.stringify(vault));
+  },
+  hasKey(provider) {
+    const vault = JSON.parse(localStorage.getItem(SEC_KEY_STORAGE) || '{}');
+    return !!vault[provider];
+  }
+};
+window.securityLayer = securityLayer;
 
 // ConfigManager
 const CFG_KEY = 'fai3_cfg';
