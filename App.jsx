@@ -1507,7 +1507,10 @@ function Dashboard() {
                 <Divider/>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontSize:12, color:T.textDim }}>{p.missions?.length || 0} misiones</span>
-                  <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }}>Eliminar</Btn>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <Btn size="xs" onClick={(e) => { e.stopPropagation(); setActiveProjectId(p.id); }}>Abrir →</Btn>
+                    <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }}>Eliminar</Btn>
+                  </div>
                 </div>
               </Card>
             ))}
