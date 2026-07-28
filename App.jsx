@@ -200,6 +200,19 @@ const aiService = {
     const anthropicKey = await window.securityLayer?.getDecryptedKey('anthropic_key');
     const openAIKey = await window.securityLayer?.getDecryptedKey('openai_key');
 
+    // Control de límite de uso y cuotas (Usage Quota & Auto-Logout System)
+    const usageCount = parseInt(localStorage.getItem('fai4_usage_count') || '0');
+    const MAX_FREE_USAGE_PER_SESSION = 50; // Límite de ejecuciones de prompt por sesión/día
+
+    if (usageCount >= MAX_FREE_USAGE_PER_SESSION) {
+      eventBus.emit({ type: 'QuotaExceeded', projectId: '__system__', payload: { usageCount } });
+      alert('⚠️ Has alcanzado el límite de uso diario para esta sesión. Cerrando sesión por seguridad para evitar costos o bloqueo...');
+      localStorage.removeItem('fai4_sec_vault');
+      localStorage.setItem('fai4_usage_count', '0');
+      window.location.reload();
+      throw new ForgeError('Límite de uso alcanzado. Sesión cerrada automáticamente.', 'QUOTA_EXCEEDED');
+    }
+
     if (!cfg.simulationMode && (anthropicKey || openAIKey)) {
       try {
         if (anthropicKey) {
@@ -217,8 +230,19 @@ const aiService = {
               max_tokens: 4096
             })
           });
+
+          // Detección automática de límite de uso (HTTP 429 Rate Limit o Quota Exceeded)
+          if (res.status === 429 || res.status === 402) {
+            alert('⚠️ Límite de uso del proveedor de IA alcanzado (Rate Limit / Quota Exceeded). Cerrando sesión automáticamente...');
+            window.securityLayer?.removeKey('anthropic_key');
+            configManager.set({ simulationMode: true });
+            window.location.reload();
+            throw new ForgeError('Límite de IA alcanzado. Logout automático.', 'AI_RATE_LIMIT');
+          }
+
           const data = await res.json();
           const outText = data.content?.[0]?.text || '[Error en respuesta de API]';
+          localStorage.setItem('fai4_usage_count', (usageCount + 1).toString());
           if (onChunk) onChunk(outText, true);
           return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'anthropic-api' };
         } else if (openAIKey) {
@@ -233,15 +257,28 @@ const aiService = {
               messages: [{ role: 'system', content: agentConfig?.systemPrompt || 'Eres un asistente experto.' }, { role: 'user', content: prompt }]
             })
           });
+
+          if (res.status === 429 || res.status === 402) {
+            alert('⚠️ Límite de uso alcanzado en OpenAI. Cerrando sesión automáticamente...');
+            window.securityLayer?.removeKey('openai_key');
+            configManager.set({ simulationMode: true });
+            window.location.reload();
+            throw new ForgeError('Límite de IA alcanzado. Logout automático.', 'AI_RATE_LIMIT');
+          }
+
           const data = await res.json();
           const outText = data.choices?.[0]?.message?.content || '[Error en respuesta de API]';
+          localStorage.setItem('fai4_usage_count', (usageCount + 1).toString());
           if (onChunk) onChunk(outText, true);
           return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'openai-api' };
         }
       } catch (e) {
+        if ((e as Error).name === 'ForgeError') throw e;
         console.warn('[AI Engine] Error llamando a la API real, recurriendo a simulación local:', e);
       }
     }
+
+    localStorage.setItem('fai4_usage_count', (usageCount + 1).toString());
 
     // Modo simulación (local por defecto)
     const fn = SIM[role] || ((i) => `[Simulación] ${role}\n\n${i.slice(0,300)}`);
@@ -1302,7 +1339,26 @@ function ProjectView({ project, onBack }) {
             <div style={{ fontSize:11, color:T.textMuted, marginTop:1 }}>{CAT[project.category]?.label} · {done}/{total} misiones</div>
           </div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button onClick={async () => {
+            const current = await window.securityLayer?.getDecryptedKey('anthropic_key');
+            const key = prompt('Introduce tu API Key de Anthropic (sk-ant-...) u OpenAI (sk-...) para usar modelos reales:', current || '');
+            if (key !== null) {
+              if (key.trim()) {
+                const provider = key.startsWith('sk-ant-') ? 'anthropic_key' : 'openai_key';
+                await window.securityLayer?.saveEncryptedKey(provider, key.trim());
+                configManager.set({ simulationMode: false });
+                alert('✓ API Key cifrada y guardada en tu navegador. Modo Real activado.');
+              } else {
+                window.securityLayer?.removeKey('anthropic_key');
+                window.securityLayer?.removeKey('openai_key');
+                configManager.set({ simulationMode: true });
+                alert('API Key eliminada. Modo Simulación activado.');
+              }
+            }
+          }} style={{ padding:'4px 10px', borderRadius:20, border:`1px solid ${(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key'))?T.primary+'60':T.border}`, background:(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key'))?T.primary+'15':'transparent', color:(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key'))?T.primary:T.textMuted, fontSize:11, fontWeight:500, cursor:'pointer' }}>
+            {(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key')) ? '🔑 Key Real ON' : '🔑 Key Real'}
+          </button>
           <Btn variant="ghost" size="sm" onClick={() => exportProject(project.id)}>📤 Exportar</Btn>
           <Btn size="sm" onClick={() => setShowNewMission(true)}>+ Nueva misión</Btn>
         </div>
