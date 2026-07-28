@@ -1404,7 +1404,7 @@ function ProjectView({ project, onBack }) {
 
 function Dashboard() {
   const { projects, activeProjectId, setActiveProjectId, deleteProject, config, toggleSim, importProject, storageReady } = useStore();
-  const setActiveProject = setActiveProjectId;
+  const [selectedId, setSelectedId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDev, setShowDev] = useState(false);
@@ -1412,10 +1412,11 @@ function Dashboard() {
   const [importErr, setImportErr] = useState('');
   const fileRef = useRef();
 
-  const activeProject = projects.find(p => p.id === activeProjectId);
+  const currentId = selectedId || activeProjectId;
+  const activeProject = projects.find(p => p.id === currentId);
 
   if (activeProject) {
-    return <ProjectView project={activeProject} onBack={() => setActiveProjectId(null)} />;
+    return <ProjectView project={activeProject} onBack={() => { setSelectedId(null); setActiveProjectId(null); }} />;
   }
 
   const tot = projects.reduce((s,p)=>s+(p.missions?.length||0),0);
@@ -1499,7 +1500,7 @@ function Dashboard() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map(p => (
-              <Card key={p.id} onClick={() => setActiveProjectId(p.id)} style={{ padding: 18, cursor: 'pointer' }}>
+              <Card key={p.id} onClick={() => { setSelectedId(p.id); setActiveProjectId(p.id); }} style={{ padding: 18, cursor: 'pointer' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                   <h3 style={{ color: T.text, fontSize: 16, fontFamily:'Space Grotesk' }}>{p.name}</h3>
                   <Badge label={CAT[p.category]?.label || p.category} color={CAT[p.category]?.color || T.primary}/>
@@ -1509,7 +1510,7 @@ function Dashboard() {
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontSize:12, color:T.textDim }}>{p.missions?.length || 0} misiones</span>
                   <div style={{ display:'flex', gap:6 }}>
-                    <Btn size="xs" onClick={(e) => { e.stopPropagation(); setActiveProjectId(p.id); }}>Abrir →</Btn>
+                    <Btn size="xs" onClick={(e) => { e.stopPropagation(); setSelectedId(p.id); setActiveProjectId(p.id); }}>Abrir →</Btn>
                     <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }}>Eliminar</Btn>
                   </div>
                 </div>
