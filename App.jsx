@@ -633,7 +633,6 @@ const fmtMs = (ms) => ms<1000?`${Math.round(ms)}ms`:`${(ms/1000).toFixed(1)}s`;
 // Inject CSS
 const _s = document.createElement('style');
 _s.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:${T.bg};color:${T.text};font-family:'Inter',sans-serif;min-height:100vh}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:${T.surface}}::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}

@@ -9,79 +9,64 @@
   <!-- React 18 & ReactDOM UMD -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- Babel standalone para transformar JSX en tiempo de ejecución -->
+  <!-- Babel standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <!-- Fuentes tipográficas -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@600;700&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #080C18;
-      color: #f1f5f9;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background-color: #080C18; color: #f1f5f9; }
   </style>
 </head>
 
 <body>
   <div id="root"></div>
 
-  <!-- Exponer React en el ámbito global para Babel -->
   <script>
     window.React = React;
     window.ReactDOM = ReactDOM;
-  </script>
 
-  <!-- Carga de App.jsx -->
-  <script type="text/babel" data-presets="react" src="./App.jsx"></script>
+    // Cargar App.jsx mediante fetch y transpilarlo sin inserción de ES Modules
+    fetch('./App.jsx')
+      .then(res => res.text())
+      .then(code => {
+        // Transpilar JSX a JS tradicional usando runtime clásico
+        const compiled = Babel.transform(code, {
+          presets: [
+            ['react', { runtime: 'classic' }]
+          ]
+        }).code;
 
-  <!-- Renderizado cuando el script de App.jsx haya sido procesado por Babel -->
-  <script type="text/babel" data-presets="react">
-    (function init() {
-      let startTime = Date.now();
-      function checkAndRender() {
-        try {
-          if (window.StoreProvider && window.Dashboard) {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(
-              <window.StoreProvider>
-                <window.Dashboard />
-              </window.StoreProvider>
-            );
-          } else if (Date.now() - startTime < 15000) {
-            setTimeout(checkAndRender, 100);
-          } else {
-            console.error("Timeout al cargar StoreProvider o Dashboard");
-            document.getElementById('root').innerHTML = `
-              <div style="padding: 40px; text-align: center; color: #ef4444;">
-                <h2>⚠️ Error de Carga</h2>
-                <p style="margin-top: 10px; color: #94a3b8;">Revisa la consola del navegador para ver el detalle técnico.</p>
-              </div>
-            `;
-          }
-        } catch (err) {
-          console.error("Error al renderizar la app:", err);
-          document.getElementById('root').innerHTML = `
-            <div style="padding: 40px; text-align: center; color: #ef4444;">
-              <h2>⚠️ Error de Ejecución</h2>
-              <pre style="margin-top: 10px; color: #94a3b8; font-family: monospace;">${err.stack || err.message}</pre>
-            </div>
-          `;
+        // Ejecutar el código compilado
+        const scriptEl = document.createElement('script');
+        scriptEl.textContent = compiled;
+        document.body.appendChild(scriptEl);
+
+        // Renderizar la aplicación React
+        if (window.StoreProvider && window.Dashboard) {
+          const root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(
+            React.createElement(window.StoreProvider, null,
+              React.createElement(window.Dashboard, null)
+            )
+          );
+        } else {
+          console.error("No se encontraron StoreProvider o Dashboard");
         }
-      }
-      checkAndRender();
-    })();
+      })
+      .catch(err => {
+        console.error("Error al cargar App.jsx:", err);
+        document.getElementById('root').innerHTML = `
+          <div style="padding: 40px; text-align: center; color: #ef4444;">
+            <h2>⚠️ Error de Carga</h2>
+            <pre style="margin-top: 10px; color: #94a3b8; font-family: monospace;">${err.message}</pre>
+          </div>
+        `;
+      });
   </script>
 </body>
 
