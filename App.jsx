@@ -1498,7 +1498,7 @@ function Dashboard() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map(p => (
-              <Card key={p.id} onClick={() => setActiveProjectId(p.id)} style={{ padding: 18, cursor: 'pointer' }}>
+              <Card key={p.id} onClick={() => { setActiveProjectId(p.id); }} style={{ padding: 18, cursor: 'pointer' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                   <h3 style={{ color: T.text, fontSize: 16, fontFamily:'Space Grotesk' }}>{p.name}</h3>
                   <Badge label={CAT[p.category]?.label || p.category} color={CAT[p.category]?.color || T.primary}/>
