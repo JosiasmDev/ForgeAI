@@ -18,11 +18,23 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; background-color: #080C18; color: #f1f5f9; }
   </style>
 </head>
 <body>
   <div id="root"></div>
+
+  <!-- Exponer hooks de React de forma global para que el script JSX no falle -->
+  <script>
+    window.useState = React.useState;
+    window.useEffect = React.useEffect;
+    window.useRef = React.useRef;
+    window.useCallback = React.useCallback;
+    window.useMemo = React.useMemo;
+    window.useReducer = React.useReducer;
+    window.createContext = React.createContext;
+    window.useContext = React.useContext;
+  </script>
 
   <!-- Carga del archivo principal de la aplicación -->
   <script type="text/babel" src="./App.jsx"></script>
@@ -31,7 +43,11 @@
   <script type="text/babel">
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
-    root.render(<Dashboard />);
+    root.render(
+      <StoreProvider>
+        <Dashboard />
+      </StoreProvider>
+    );
   </script>
 </body>
 </html>

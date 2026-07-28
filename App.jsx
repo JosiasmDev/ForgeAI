@@ -1,5 +1,3 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useReducer, createContext, useContext } from "react";
-
 // ─── KERNEL ────────────────────────────────────────────────────────────────────
 class ForgeError extends Error {
   constructor(msg, code = 'ERR', ctx = {}) {
