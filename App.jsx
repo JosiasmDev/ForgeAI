@@ -1174,23 +1174,55 @@ function Dashboard({ onNavigate }) {
           <button onClick={toggleSim} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${config.simulationMode?T.accent+'60':T.border}`, background:config.simulationMode?T.accent+'15':'transparent', color:config.simulationMode?T.accent:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
             {config.simulationMode ? '🔬 Simulación' : '⚡ Real'}
           </button>
+          <Btn variant="ghost" size="sm" onClick={() => setShowDev(true)}>🔬 Dev Panel</Btn>
+          <Btn variant="ghost" size="sm" onClick={() => setShowImport(true)}>📥 Importar</Btn>
+          <Btn size="sm" onClick={() => setShowCreate(true)}>+ Nuevo proyecto</Btn>
         </div>
       </div>
-      <div style={{ padding: 24 }}>
-        <h2 style={{ color: T.text, fontFamily: 'Space Grotesk' }}>Proyectos ({projects.length})</h2>
+
+      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
+          <MetricChip label="Proyectos activos" value={projects.length} color={T.primary}/>
+          <MetricChip label="Misiones totales" value={tot} color={T.accent}/>
+          <MetricChip label="Misiones completadas" value={done} color={T.success}/>
+          <MetricChip label="Nodos memoria" value={nodes} color={T.teal}/>
+        </div>
+
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <h2 style={{ color: T.text, fontFamily: 'Space Grotesk', fontSize: 20 }}>Proyectos ({projects.length})</h2>
+          <Btn size="sm" onClick={() => setShowCreate(true)}>+ Nuevo proyecto</Btn>
+        </div>
+
         {projects.length === 0 ? (
-          <div style={{ color: T.textMuted, marginTop: 12 }}>No hay proyectos. Crea uno nuevo para comenzar.</div>
+          <Empty 
+            icon="📦" 
+            title="Sin proyectos activos" 
+            subtitle="Crea tu primer proyecto para empezar a asignar misiones a los agentes de IA."
+            action={<Btn onClick={() => setShowCreate(true)}>+ Crear primer proyecto</Btn>}
+          />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginTop: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map(p => (
-              <div key={p.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
-                <h3 style={{ color: T.text, fontSize: 16 }}>{p.name}</h3>
-                <p style={{ color: T.textMuted, fontSize: 12, marginTop: 4 }}>{p.description || 'Sin descripción'}</p>
-              </div>
+              <Card key={p.id} onClick={() => setActiveProject(p.id)} style={{ padding: 18, cursor: 'pointer' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                  <h3 style={{ color: T.text, fontSize: 16, fontFamily:'Space Grotesk' }}>{p.name}</h3>
+                  <Badge label={CAT[p.category]?.label || p.category} color={CAT[p.category]?.color || T.primary}/>
+                </div>
+                <p style={{ color: T.textMuted, fontSize: 13, minHeight: 36 }}>{p.description || 'Sin descripción'}</p>
+                <Divider/>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:T.textDim }}>{p.missions?.length || 0} misiones</span>
+                  <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }}>Eliminar</Btn>
+                </div>
+              </Card>
             ))}
           </div>
         )}
       </div>
+
+      <CreateProjectModal open={showCreate} onClose={() => setShowCreate(false)}/>
+      <DevPanel open={showDev} onClose={() => setShowDev(false)}/>
+      <ApprovalLayer/>
     </div>
   );
 }
