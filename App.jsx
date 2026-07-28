@@ -1163,14 +1163,29 @@ function Dashboard({ onNavigate }) {
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           {!storageReady && <span style={{ fontSize:12, color:T.warning }}>⏳ IndexedDB…</span>}
           <button onClick={toggleSim} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${config.simulationMode?T.accent+'60':T.border}`, background:config.simulationMode?T.accent+'15':'transparent', color:config.simulationMode?T.accent:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+            {config.simulationMode ? '🔬 Simulación' : '⚡ Real'}
           </button>
         </div>
+      </div>
+      <div style={{ padding: 24 }}>
+        <h2 style={{ color: T.text, fontFamily: 'Space Grotesk' }}>Proyectos ({projects.length})</h2>
+        {projects.length === 0 ? (
+          <div style={{ color: T.textMuted, marginTop: 12 }}>No hay proyectos. Crea uno nuevo para comenzar.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginTop: 16 }}>
+            {projects.map(p => (
+              <div key={p.id} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
+                <h3 style={{ color: T.text, fontSize: 16 }}>{p.name}</h3>
+                <p style={{ color: T.textMuted, fontSize: 12, marginTop: 4 }}>{p.description || 'Sin descripción'}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Exponer componentes globalmente
 window.StoreProvider = StoreProvider;
 window.Dashboard = Dashboard;
        
