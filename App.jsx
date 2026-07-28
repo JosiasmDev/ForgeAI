@@ -1145,20 +1145,71 @@ function DevPanel({ open, onClose }) {
 }
 
 // ─── SCREENS ────────────────────────────────────────────────────────────────────
-function Dashboard({ onNavigate }) {
-  const { projects, deleteProject, exportProject, config, toggleSim, importProject, storageReady } = useStore();
+function ProjectView({ project, onBack }) {
+  const { exportProject } = useStore();
+  const [tab, setTab] = useState('missions');
+  const [showNewMission, setShowNewMission] = useState(false);
+  const done = project.missions?.filter(m=>m.status==='completed').length || 0;
+  const total = project.missions?.length || 0;
+  const nodes = project.memory?.knowledgeGraph?.nodes?.length || 0;
+
+  return (
+    <div style={{ minHeight:'100vh', background:T.bg }}>
+      <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:'12px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <Btn variant="ghost" size="sm" onClick={onBack}>← Volver</Btn>
+          <div>
+            <div style={{ fontFamily:'Space Grotesk', fontWeight:700, fontSize:17, color:T.text }}>{project.name}</div>
+            <div style={{ fontSize:11, color:T.textMuted, marginTop:1 }}>{CAT[project.category]?.label} · {done}/{total} misiones</div>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <Btn variant="ghost" size="sm" onClick={() => exportProject(project.id)}>📤 Exportar</Btn>
+          <Btn size="sm" onClick={() => setShowNewMission(true)}>+ Nueva misión</Btn>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:1100, margin:'0 auto', padding:24 }}>
+        <div style={{ borderBottom:`1px solid ${T.border}`, display:'flex', marginBottom:20, gap:2 }}>
+          {[['missions',`🎯 Misiones (${total})`],['memory',`🧠 Memoria (${nodes})`],['agents','🤖 Agentes'],['tools','🔧 Tools'],['timeline','⏱ Timeline']].map(([id,label]) => (
+            <button key={id} style={{ background:tab===id?T.primary+'18':'transparent', border:'none', borderBottom:`2px solid ${tab===id?T.primary:'transparent'}`, color:tab===id?T.primary:T.textMuted, padding:'10px 16px', fontWeight:500, fontSize:14, cursor:'pointer' }} onClick={()=>setTab(id)}>{label}</button>
+          ))}
+        </div>
+
+        {tab==='missions' && <MissionsTab project={project} onNewMission={() => setShowNewMission(true)} />}
+        {tab==='memory' && <MemoryTab project={project} />}
+        {tab==='agents' && <AgentsTab />}
+        {tab==='tools' && <ToolsTab />}
+        {tab==='timeline' && <TimelineTab projectId={project.id} />}
+      </div>
+
+      <NewMissionModal open={showNewMission} onClose={() => setShowNewMission(false)} projectId={project.id} />
+    </div>
+  );
+}
+
+function Dashboard() {
+  const { projects, activeProjectId, setActiveProjectId, deleteProject, config, toggleSim, importProject, storageReady } = useStore();
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDev, setShowDev] = useState(false);
   const [importText, setImportText] = useState('');
   const [importErr, setImportErr] = useState('');
   const fileRef = useRef();
-  const tot = projects.reduce((s,p)=>s+p.missions.length,0);
-  const done = projects.reduce((s,p)=>s+p.missions.filter(m=>m.status==='completed').length,0);
+
+  const activeProject = projects.find(p => p.id === activeProjectId);
+
+  if (activeProject) {
+    return <ProjectView project={activeProject} onBack={() => setActiveProjectId(null)} />;
+  }
+
+  const tot = projects.reduce((s,p)=>s+(p.missions?.length||0),0);
+  const done = projects.reduce((s,p)=>s+(p.missions?.filter(m=>m.status==='completed').length||0),0);
   const nodes = projects.reduce((s,p)=>s+(p.memory?.knowledgeGraph?.nodes?.length||0),0);
-  const aiMeta = aiService.getMetrics();
+
   const onFile = e => { const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>setImportText(ev.target.result); r.readAsText(f); };
   const onImport = async () => { setImportErr(''); try { await importProject(importText); setShowImport(false); setImportText(''); } catch(e) { setImportErr(e.message); } };
+
   return (
     <div style={{ minHeight:'100vh', background:T.bg }}>
       <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100 }}>
@@ -1203,7 +1254,7 @@ function Dashboard({ onNavigate }) {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map(p => (
-              <Card key={p.id} onClick={() => setActiveProject(p.id)} style={{ padding: 18, cursor: 'pointer' }}>
+              <Card key={p.id} onClick={() => setActiveProjectId(p.id)} style={{ padding: 18, cursor: 'pointer' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                   <h3 style={{ color: T.text, fontSize: 16, fontFamily:'Space Grotesk' }}>{p.name}</h3>
                   <Badge label={CAT[p.category]?.label || p.category} color={CAT[p.category]?.color || T.primary}/>
