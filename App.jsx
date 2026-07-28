@@ -1404,6 +1404,7 @@ function ProjectView({ project, onBack }) {
 
 function Dashboard() {
   const { projects, activeProjectId, setActiveProjectId, deleteProject, config, toggleSim, importProject, storageReady } = useStore();
+  const setActiveProject = setActiveProjectId;
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDev, setShowDev] = useState(false);
@@ -1498,7 +1499,7 @@ function Dashboard() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {projects.map(p => (
-              <Card key={p.id} onClick={() => { setActiveProjectId(p.id); }} style={{ padding: 18, cursor: 'pointer' }}>
+              <Card key={p.id} onClick={() => { setActiveProject(p.id); }} style={{ padding: 18, cursor: 'pointer' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
                   <h3 style={{ color: T.text, fontSize: 16, fontFamily:'Space Grotesk' }}>{p.name}</h3>
                   <Badge label={CAT[p.category]?.label || p.category} color={CAT[p.category]?.color || T.primary}/>
@@ -1508,8 +1509,8 @@ function Dashboard() {
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontSize:12, color:T.textDim }}>{p.missions?.length || 0} misiones</span>
                   <div style={{ display:'flex', gap:6 }}>
-                    <Btn size="xs" onClick={(e) => { e.stopPropagation(); setActiveProjectId(p.id); }}>Abrir →</Btn>
-                    <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }}>Eliminar</Btn>
+                    <Btn size="xs" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setActiveProject(p.id); }}>Abrir →</Btn>
+                    <Btn size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); e.preventDefault(); deleteProject(p.id); }}>Eliminar</Btn>
                   </div>
                 </div>
               </Card>
