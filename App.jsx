@@ -1441,11 +1441,20 @@ function Dashboard() {
           </button>
           <button onClick={async () => {
             const current = await window.securityLayer?.getDecryptedKey('claude_session_key');
-            const key = prompt('Introduce tu cookie sessionKey de claude.ai para usar tu cuenta web gratuita de Claude:', current || '');
-            if (key !== null) {
-              if (key.trim()) {
-                await window.securityLayer?.saveEncryptedKey('claude_session_key', key.trim());
-                alert('✓ Sesión Web de Claude cifrada y guardada. El Browser Engine usará tu cuenta web de Claude.');
+            const raw = prompt('Pega aquí la cookie o el código sk-ant-sid01-... de Claude.ai:', current || '');
+            if (raw !== null) {
+              if (raw.trim()) {
+                // Extracción automática inteligente del token sessionKey si pega todo el texto de document.cookie
+                let key = raw.trim();
+                if (key.includes('sessionKey=')) {
+                  key = key.split('sessionKey=')[1].split(';')[0].trim();
+                }
+                if (key.startsWith('sk-ant-') || key.length > 20) {
+                  await window.securityLayer?.saveEncryptedKey('claude_session_key', key);
+                  alert('✓ Sesión Web de Claude extraída, cifrada y guardada correctamente.');
+                } else {
+                  alert('⚠️ No se detectó un sessionKey válido. Asegúrate de incluir el código que empieza por sk-ant-sid01-...');
+                }
               } else {
                 window.securityLayer?.removeKey('claude_session_key');
                 alert('Sesión Web de Claude desactivada.');
