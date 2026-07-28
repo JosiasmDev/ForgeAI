@@ -194,9 +194,58 @@ const aiService = {
   async execute(prompt, agentConfig, onChunk = null) {
     const cfg = configManager.get();
     const role = agentConfig?.role || 'product_manager';
+    const start = Date.now();
+
+    // Comprobar si hay una API Key real guardada en el navegador
+    const anthropicKey = await window.securityLayer?.getDecryptedKey('anthropic_key');
+    const openAIKey = await window.securityLayer?.getDecryptedKey('openai_key');
+
+    if (!cfg.simulationMode && (anthropicKey || openAIKey)) {
+      try {
+        if (anthropicKey) {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': anthropicKey,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: cfg.defaultModel || 'claude-3-5-sonnet-20241022',
+              system: agentConfig?.systemPrompt || 'Eres un asistente experto.',
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: 4096
+            })
+          });
+          const data = await res.json();
+          const outText = data.content?.[0]?.text || '[Error en respuesta de API]';
+          if (onChunk) onChunk(outText, true);
+          return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'anthropic-api' };
+        } else if (openAIKey) {
+          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${openAIKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [{ role: 'system', content: agentConfig?.systemPrompt || 'Eres un asistente experto.' }, { role: 'user', content: prompt }]
+            })
+          });
+          const data = await res.json();
+          const outText = data.choices?.[0]?.message?.content || '[Error en respuesta de API]';
+          if (onChunk) onChunk(outText, true);
+          return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'openai-api' };
+        }
+      } catch (e) {
+        console.warn('[AI Engine] Error llamando a la API real, recurriendo a simulación local:', e);
+      }
+    }
+
+    // Modo simulación (local por defecto)
     const fn = SIM[role] || ((i) => `[Simulación] ${role}\n\n${i.slice(0,300)}`);
     const output = fn(prompt);
-    const start = Date.now();
 
     if (cfg.streamingEnabled && onChunk) {
       const words = output.split(' ');
@@ -1314,6 +1363,25 @@ function Dashboard() {
           {!storageReady && <span style={{ fontSize:12, color:T.warning }}>⏳ IndexedDB…</span>}
           <button onClick={toggleSim} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${config.simulationMode?T.accent+'60':T.border}`, background:config.simulationMode?T.accent+'15':'transparent', color:config.simulationMode?T.accent:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
             {config.simulationMode ? '🔬 Simulación' : '⚡ Real'}
+          </button>
+          <button onClick={async () => {
+            const current = await window.securityLayer?.getDecryptedKey('anthropic_key');
+            const key = prompt('Introduce tu API Key de Anthropic (sk-ant-...) u OpenAI (sk-...) para usar modelos reales:', current || '');
+            if (key !== null) {
+              if (key.trim()) {
+                const provider = key.startsWith('sk-ant-') ? 'anthropic_key' : 'openai_key';
+                await window.securityLayer?.saveEncryptedKey(provider, key.trim());
+                configManager.set({ simulationMode: false });
+                alert('✓ API Key cifrada y guardada en tu navegador. Modo Real activado.');
+              } else {
+                window.securityLayer?.removeKey('anthropic_key');
+                window.securityLayer?.removeKey('openai_key');
+                configManager.set({ simulationMode: true });
+                alert('API Key eliminada. Modo Simulación activado.');
+              }
+            }
+          }} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key'))?T.primary+'60':T.border}`, background:(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key'))?T.primary+'15':'transparent', color:(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key'))?T.primary:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+            {(window.securityLayer?.hasKey('anthropic_key')||window.securityLayer?.hasKey('openai_key')) ? '🔑 Key Real ON' : '🔑 Configurar Key'}
           </button>
           <button onClick={async () => {
             const current = await window.securityLayer?.getDecryptedKey('github_token');
