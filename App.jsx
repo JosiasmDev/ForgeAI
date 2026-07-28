@@ -273,7 +273,7 @@ const aiService = {
           return { output: outText, tokensUsed: data.usage?.total_tokens || 500, latencyMs: Date.now() - start, cost: 0.002, provider: 'openai-api' };
         }
       } catch (e) {
-        if ((e as Error).name === 'ForgeError') throw e;
+        if (e && e.name === 'ForgeError') throw e;
         console.warn('[AI Engine] Error llamando a la API real, recurriendo a simulación local:', e);
       }
     }
