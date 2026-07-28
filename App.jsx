@@ -1148,13 +1148,13 @@ function TimelineTab({ projectId }) {
 // ─── MODALS ─────────────────────────────────────────────────────────────────────
 function NewMissionModal({ open, onClose, projectId }) {
   const { createAndRunMission, isRunning } = useStore();
-  const [form, setForm] = useState({ goal:'', description:'', template:'validate_idea', requiresApproval:true });
+  const [form, setForm] = useState({ goal:'', description:'', template:'validate_idea', requiresApproval:false });
   const set = k => e => setForm(f => ({ ...f, [k]:e.target.value }));
   const run = async () => {
     if (!form.goal.trim()) return;
     onClose();
     await createAndRunMission(projectId, form.goal, form.description, form.template, form.requiresApproval);
-    setForm({ goal:'', description:'', template:'validate_idea', requiresApproval:true });
+    setForm({ goal:'', description:'', template:'validate_idea', requiresApproval:false });
   };
   return (
     <Modal open={open} onClose={onClose} title="🚀 Nueva misión">
