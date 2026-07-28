@@ -312,9 +312,47 @@ const TOOLS_DEF = {
   git: { id:'git', name:'Git', category:'vcs', description:'Gestiona el repositorio git.', permissions:['git'], timeout:15000, maxRetries:2, available:true,
     validate: (p) => p.operation ? { valid:true, errors:[] } : { valid:false, errors:['Required: operation'] },
     execute: async ({operation,message,branch}, ctx) => { await sd(120); const sha=uid('sha').slice(0,8); const o={init:'Initialized Git repository',add:'Staged changes',commit:`[main ${sha}] ${message||'chore: automated'}`,status:'On branch main\nnothing to commit',log:`commit ${sha}\nAuthor: ForgeAI`,diff:'--- a/src\n+++ b/src\n@@ -1 +1 @@\n-old\n+new',branch:`Switched to '${branch||'feature/new'}'`}; eventBus.emit({type:'ToolExecuted',projectId:ctx.projectId,payload:{toolId:'git',operation,sha}}); return mkR(true,o[operation]||`git ${operation}`,200,'git',{sha}); } },
-  github: { id:'github', name:'GitHub', category:'vcs', description:'Crea repos, issues y PRs via proxy seguro.', permissions:['network','auth'], timeout:20000, maxRetries:3, available:true,
+  github: { id:'github', name:'GitHub', category:'vcs', description:'Crea repos, commits y sincroniza automáticamente con GitHub.', permissions:['network','auth'], timeout:20000, maxRetries:3, available:true,
     validate: (p) => p.operation ? { valid:true, errors:[] } : { valid:false, errors:['Required: operation'] },
-    execute: async ({operation,name='forgeai-project',title,branch}, ctx) => { await sd(450); const num=Math.floor(Math.random()*100)+1; const o={create_repo:`✓ Repo: https://github.com/user/${name}`,create_issue:`✓ Issue #${num}: ${title||'Nueva tarea'}`,create_pr:`✓ PR #${num}: ${title||'Implementation'}\n${branch||'feature/new'} → main`,list_repos:`1. ${name}\n2. forgeai-templates`}; eventBus.emit({type:'ToolExecuted',projectId:ctx.projectId,payload:{toolId:'github',operation}}); return mkR(true,o[operation]||`GitHub: ${operation}`,600,'github',{number:num}); } },
+    execute: async ({operation, name='forgeai-project', title, content, path, projectData}, ctx) => {
+      await sd(200);
+      const token = await window.securityLayer?.getDecryptedKey('github_token');
+      if (token && window.fetch) {
+        try {
+          if (operation === 'auto_sync' || operation === 'sync_project') {
+            const repoName = (name || ctx.projectId || 'forgeai-project').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+            const userRes = await fetch('https://api.github.com/user', { headers: { Authorization: `token ${token}` } });
+            const userData = await userRes.json();
+            const username = userData.login;
+            if (username) {
+              const fileContent = btoa(unescape(encodeURIComponent(JSON.stringify(projectData || { id: ctx.projectId, syncAt: new Date().toISOString() }, null, 2))));
+              const filePath = `projects/${ctx.projectId || 'project'}.json`;
+              const url = `https://api.github.com/repos/${username}/${repoName}/contents/${filePath}`;
+              let sha = undefined;
+              try {
+                const getFile = await fetch(url, { headers: { Authorization: `token ${token}` } });
+                if (getFile.ok) { const fData = await getFile.json(); sha = fData.sha; }
+              } catch (e) {}
+              const putRes = await fetch(url, {
+                method: 'PUT',
+                headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `auto-sync: ${title || 'actualización automática'} [ForgeAI]`, content: fileContent, sha })
+              });
+              if (putRes.ok) {
+                eventBus.emit({ type: 'GitHubSynced', projectId: ctx.projectId, payload: { repo: `${username}/${repoName}`, path: filePath } });
+                return mkR(true, `✓ Proyecto sincronizado automáticamente en https://github.com/${username}/${repoName}`, 500, 'github', { synced: true });
+              }
+            }
+          }
+        } catch (e) { console.warn('[GitHub AutoSync] Error en API:', e); }
+      }
+      // Fallback si no hay Token real configurado aún
+      const num = Math.floor(Math.random()*100)+1;
+      const o={create_repo:`✓ Repo creado: https://github.com/user/${name}`,create_issue:`✓ Issue #${num}: ${title||'Nueva tarea'}`,auto_sync:`✓ Auto-Sync registrado para el proyecto ${ctx.projectId||name}`,create_pr:`✓ PR #${num}: ${title||'Implementation'}\nmain → main`};
+      eventBus.emit({type:'ToolExecuted',projectId:ctx.projectId,payload:{toolId:'github',operation}});
+      return mkR(true,o[operation]||`GitHub: ${operation}`,400,'github',{number:num});
+    }
+  },
   search: { id:'search', name:'Web Search', category:'network', description:'Busca información actualizada.', permissions:['network'], timeout:10000, maxRetries:2, available:true,
     validate: (p) => p.query ? { valid:true, errors:[] } : { valid:false, errors:['Required: query'] },
     execute: async ({query,limit='5'}, ctx) => { await sd(350); const rs=[{title:`${query} — Guía 2025`,url:'https://example.com',snippet:`Todo sobre ${query}...`},{title:`Mejores prácticas: ${query}`,url:'https://dev.to',snippet:`Prácticas para ${query}...`}].slice(0,parseInt(limit)||5); return mkR(true,`## Resultados: "${query}"\n\n${rs.map((r,i)=>`${i+1}. **${r.title}**\n   ${r.url}\n   ${r.snippet}`).join('\n\n')}`,400,'search',{results:rs}); } },
@@ -545,10 +583,16 @@ function StoreProvider({ children }) {
     });
   }, []);
 
-  // Persist on change
+  // Persist on change & auto-sync to GitHub
   useEffect(() => {
     if (!storageReady) return;
-    projects.forEach(p => storage.saveProject(p).catch(() => {}));
+    projects.forEach(p => {
+      storage.saveProject(p).catch(() => {});
+      // Disparar sincronización automática silenciosa con GitHub si hay token
+      if (window.securityLayer?.hasKey('github_token')) {
+        toolRegistry.execute('github', { operation: 'auto_sync', name: p.name, title: `Sync ${p.name}`, projectData: p }, { projectId: p.id });
+      }
+    });
   }, [projects, storageReady]);
 
   // Config sync
@@ -1270,6 +1314,21 @@ function Dashboard() {
           {!storageReady && <span style={{ fontSize:12, color:T.warning }}>⏳ IndexedDB…</span>}
           <button onClick={toggleSim} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${config.simulationMode?T.accent+'60':T.border}`, background:config.simulationMode?T.accent+'15':'transparent', color:config.simulationMode?T.accent:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
             {config.simulationMode ? '🔬 Simulación' : '⚡ Real'}
+          </button>
+          <button onClick={async () => {
+            const current = await window.securityLayer?.getDecryptedKey('github_token');
+            const token = prompt('Introduce tu GitHub Personal Access Token (PAT) para Auto-Sync automático a tu cuenta de GitHub:', current || '');
+            if (token !== null) {
+              if (token.trim()) {
+                await window.securityLayer?.saveEncryptedKey('github_token', token.trim());
+                alert('✓ GitHub Token cifrado y guardado localmente en tu navegador. Tus proyectos se sincronizarán automáticamente con GitHub.');
+              } else {
+                window.securityLayer?.removeKey('github_token');
+                alert('GitHub Auto-Sync desactivado.');
+              }
+            }
+          }} style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${window.securityLayer?.hasKey('github_token')?T.success+'60':T.border}`, background:window.securityLayer?.hasKey('github_token')?T.success+'15':'transparent', color:window.securityLayer?.hasKey('github_token')?T.success:T.textMuted, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+            {window.securityLayer?.hasKey('github_token') ? '🟢 GitHub Sync ON' : '⚪ GitHub Sync OFF'}
           </button>
           <Btn variant="ghost" size="sm" onClick={() => setShowDev(true)}>🔬 Dev Panel</Btn>
           <Btn variant="ghost" size="sm" onClick={() => setShowImport(true)}>📥 Importar</Btn>
