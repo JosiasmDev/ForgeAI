@@ -45,14 +45,17 @@
     let attempts = 0;
     function renderApp() {
       try {
-        if (typeof window.Dashboard !== 'undefined' && typeof window.StoreProvider !== 'undefined') {
+        const Dash = window.Dashboard || (typeof Dashboard !== 'undefined' ? Dashboard : null);
+        const Store = window.StoreProvider || (typeof StoreProvider !== 'undefined' ? StoreProvider : null);
+
+        if (Dash && Store) {
           const root = ReactDOM.createRoot(document.getElementById('root'));
           root.render(
-            <window.StoreProvider>
-              <window.Dashboard />
-            </window.StoreProvider>
+            <Store>
+              <Dash />
+            </Store>
           );
-        } else if (attempts < 50) {
+        } else if (attempts < 60) {
           attempts++;
           setTimeout(renderApp, 100);
         } else {
