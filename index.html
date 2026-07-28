@@ -49,16 +49,35 @@
   <!-- Renderizado cuando el script de App.jsx haya sido procesado por Babel -->
   <script type="text/babel" data-presets="react">
     (function init() {
+      let startTime = Date.now();
       function checkAndRender() {
-        if (window.StoreProvider && window.Dashboard) {
-          const root = ReactDOM.createRoot(document.getElementById('root'));
-          root.render(
-            <window.StoreProvider>
-              <window.Dashboard />
-            </window.StoreProvider>
-          );
-        } else {
-          requestAnimationFrame(checkAndRender);
+        try {
+          if (window.StoreProvider && window.Dashboard) {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(
+              <window.StoreProvider>
+                <window.Dashboard />
+              </window.StoreProvider>
+            );
+          } else if (Date.now() - startTime < 15000) {
+            setTimeout(checkAndRender, 100);
+          } else {
+            console.error("Timeout al cargar StoreProvider o Dashboard");
+            document.getElementById('root').innerHTML = `
+              <div style="padding: 40px; text-align: center; color: #ef4444;">
+                <h2>⚠️ Error de Carga</h2>
+                <p style="margin-top: 10px; color: #94a3b8;">Revisa la consola del navegador para ver el detalle técnico.</p>
+              </div>
+            `;
+          }
+        } catch (err) {
+          console.error("Error al renderizar la app:", err);
+          document.getElementById('root').innerHTML = `
+            <div style="padding: 40px; text-align: center; color: #ef4444;">
+              <h2>⚠️ Error de Ejecución</h2>
+              <pre style="margin-top: 10px; color: #94a3b8; font-family: monospace;">${err.stack || err.message}</pre>
+            </div>
+          `;
         }
       }
       checkAndRender();
