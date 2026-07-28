@@ -21,6 +21,10 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background-color: #080C18; color: #f1f5f9; }
   </style>
+  <!-- Anti-Caché dinámico para recarga instantánea de actualizaciones sin borrar historial ni perder sesión -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 </head>
 
 <body>
@@ -30,8 +34,8 @@
     window.React = React;
     window.ReactDOM = ReactDOM;
 
-    // Cargar App.jsx mediante fetch y transpilarlo sin inserción de ES Modules
-    fetch('./App.jsx')
+    // Cargar App.jsx con anti-caché dinámico (?v=timestamp) para actualización instantánea
+    fetch('./App.jsx?v=' + Date.now(), { cache: 'no-store' })
       .then(res => res.text())
       .then(code => {
         // Transpilar JSX a JS tradicional usando runtime clásico
